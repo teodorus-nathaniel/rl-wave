@@ -7,6 +7,7 @@ import copy
 
 import env_interface
 import model_interface
+import plot
 
 
 class QLearning(model_interface.ModelInterface):
@@ -53,28 +54,39 @@ class QLearning(model_interface.ModelInterface):
         self.gamma = gamma
         self.sync_interval = sync_interval
 
+    def update_weights(self, state, y):
+        y_pred = self.model(torch.Tensor(state))
+        loss = self.loss_fn(y_pred, torch.Tensor(y))
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        self.train_losses.append(loss.item())
+
     def update_model(self):
         batch = random.sample(self.experiences, self.batch_size)
+        batch_t = list(map(list, zip(*batch)))
+        states = batch_t[0]
+        actions = batch_t[1]
+        rewards = batch_t[2]
+        next_states = batch_t[3]
+        is_dones = batch_t[4]
 
-        states = torch.cat([s for (s, a, r, s2, done) in batch])
-        actions = torch.Tensor([a for (s, a, r, s2, done) in batch])
-        states2 = torch.cat([s2 for (s, a, r, s2, done) in batch])
-        done_data = torch.Tensor([done for (s, a, r, s2, done) in batch])
-        rewards = torch.Tensor([r for (s, a, r, s2, done) in batch])
+        states = torch.Tensor(states)
+        actions_tensor = torch.Tensor(actions)
+        rewards = torch.Tensor(rewards)
+        next_states = torch.Tensor(next_states)
+        is_dones_tensor = torch.Tensor(is_dones)
+
+        is_dones_indices = torch.where(is_dones_tensor == True)[0]
 
         qvals = self.model(states)
+        qvals_next = self.model(next_states)
 
-        with torch.no_grad():
-            qvals_2 = self.target_model(states2)
+        qvals[range(len(qvals)),actions] = rewards + self.gamma * torch.max(qvals_next, axis=1).values
+        qvals[is_dones_indices.tolist(), actions_tensor[is_dones].tolist()] = rewards[is_dones_indices.tolist()]
 
-        target = rewards + self.gamma * ((1 - done_data) * torch.max(qvals_2, dim=1)[0])
-        action_qval_pred = qvals.gather(dim=1, index=actions.long().unsqueeze(dim=1)).squeeze()
-        err = self.loss_fn(action_qval_pred, target.detach())
-        self.train_losses.append(err.item())
-
-        self.optimizer.zero_grad()
-        err.backward()
-        self.optimizer.step()
+        self.update_weights(states.tolist(), qvals.tolist())
 
     def train(self, env: env_interface.EnvInterface, epoch=1000, reset_memory=False):
         super().train(env, epoch, reset_memory)
@@ -88,9 +100,9 @@ class QLearning(model_interface.ModelInterface):
                 timestep += 1
                 interval += 1
 
-                state = torch.Tensor(state)
+                state_tensor = torch.Tensor(state)
 
-                qval = self.model(state)
+                qval = self.model(state_tensor)
                 if np.random.rand() > self.epsilon:
                     action = np.argmax(qval.detach().numpy())
                 else:
@@ -99,8 +111,7 @@ class QLearning(model_interface.ModelInterface):
                 next_state, reward, is_done = env.step(action)
                 episode_rewards.append(reward)
 
-                state2 = torch.Tensor(next_state)
-                current_exp = (state, action, reward, state2, is_done)
+                current_exp = (state[0], action, reward, next_state[0], is_done)
                 self.experiences.append(current_exp)
 
                 state = next_state
@@ -114,6 +125,7 @@ class QLearning(model_interface.ModelInterface):
             current_reward = np.sum(episode_rewards)
             self.train_rewards.append(current_reward)
             self.train_timesteps.append(timestep)
+            plot.plot_res(self.train_rewards, f'Q-Learning with Exp Replay and Target ({i + 1})')
             print(f'EPOCH: {i}, total reward: {current_reward}, timestep: {timestep}, epsilon: {self.epsilon}')
             if self.epsilon > self.min_epsilon:
                 self.epsilon -= 1 / epoch
