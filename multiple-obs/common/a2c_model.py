@@ -12,7 +12,7 @@ class A2C(model_interface.ModelInterface):
             torch.nn.Linear(input_layer, hidden_layer),
             torch.nn.ReLU(),
             torch.nn.Linear(hidden_layer, output_layer),
-            torch.nn.Softmax(dim=1)
+            torch.nn.Softmax(dim=1),
         )
         self.critic = torch.nn.Sequential(
             torch.nn.Linear(input_layer, hidden_layer),
@@ -28,7 +28,7 @@ class A2C(model_interface.ModelInterface):
         self.set_train_params()
         self.reset_train_memory()
 
-    def set_train_params(self, max_step=500, gamma=.9):
+    def set_train_params(self, max_step=500, gamma=0.9):
         self.max_step = max_step
         self.gamma = gamma
 
@@ -36,7 +36,9 @@ class A2C(model_interface.ModelInterface):
         reversed_rewards = np.copy(rewards)[::-1]
         discounted_rewards = []
         for i, reward in enumerate(reversed_rewards):
-            discounted_rewards.append(reward + (0 if i == 0 else reversed_rewards[i - 1]))
+            discounted_rewards.append(
+                reward + (0 if i == 0 else reversed_rewards[i - 1])
+            )
             reversed_rewards[i] = reward * self.gamma
             if i > 0:
                 reversed_rewards[i] += reversed_rewards[i - 1] * self.gamma
@@ -67,9 +69,11 @@ class A2C(model_interface.ModelInterface):
         detached_values = values.detach().numpy()
         masks = np.ones_like(detached_values)
         masks[-1] = 0
-        advantages = torch.Tensor(self.get_advantages(detached_values.flatten(), masks, rewards))
+        advantages = torch.Tensor(
+            self.get_advantages(detached_values.flatten(), masks, rewards)
+        )
         actions = torch.Tensor(actions.reshape(-1, 1)).long()
-        prob_batch = predictions.gather(dim=1,index=actions).squeeze()
+        prob_batch = predictions.gather(dim=1, index=actions).squeeze()
         actor_loss = (advantages * -torch.log(prob_batch)).mean()
         self.update_actor(actor_loss)
 
@@ -85,8 +89,13 @@ class A2C(model_interface.ModelInterface):
         loss.backward()
         self.actor_optimizer.step()
 
-
-    def train(self, env: env_interface.EnvInterface, epoch=1000, reset_memory=False):
+    def train(
+        self,
+        env: env_interface.EnvInterface,
+        epoch=1000,
+        reset_memory=False,
+        is_clearing_output=True,
+    ):
         super().train(env, epoch, reset_memory)
 
         for i in range(epoch):
@@ -117,12 +126,16 @@ class A2C(model_interface.ModelInterface):
 
                 state = next_state
 
-            states, actions, rewards = np.array(states), np.array(actions), np.array(rewards)
+            states, actions, rewards = (
+                np.array(states),
+                np.array(actions),
+                np.array(rewards),
+            )
             self.update_model(states, actions, rewards)
             self.train_rewards.append(episode_reward)
             self.train_timesteps.append(timestep)
-            plot.plot_res(self.train_rewards, f'A2C ({i + 1})')
-            print(f'EPOCH: {i}, total reward: {episode_reward}, timestep: {timestep}')
+            plot.plot_res(self.train_rewards, f"A2C ({i + 1})", is_clearing_output)
+            print(f"EPOCH: {i}, total reward: {episode_reward}, timestep: {timestep}")
 
         env.close()
 

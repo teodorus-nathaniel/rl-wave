@@ -2,6 +2,7 @@ import gym
 import numpy as np
 import env_interface
 
+
 class CartPoleEnv(env_interface.EnvInterface):
     def __init__(self):
         self.env = gym.make("CartPole-v1")

@@ -45,7 +45,16 @@ class QLearning(model_interface.ModelInterface):
     def sync_target_model(self):
         self.target_model = self.copy_model(self.model)
 
-    def set_train_params(self, mem_size=2500, start_epsilon=1, min_epsilon=.05, max_step=500, batch_size=512, gamma=.9, sync_interval=1000):
+    def set_train_params(
+        self,
+        mem_size=2500,
+        start_epsilon=1,
+        min_epsilon=0.05,
+        max_step=500,
+        batch_size=512,
+        gamma=0.9,
+        sync_interval=1000,
+    ):
         self.mem_size = mem_size
         self.epsilon = start_epsilon
         self.min_epsilon = min_epsilon
@@ -83,12 +92,22 @@ class QLearning(model_interface.ModelInterface):
         qvals = self.model(states)
         qvals_next = self.model(next_states)
 
-        qvals[range(len(qvals)),actions] = rewards + self.gamma * torch.max(qvals_next, axis=1).values
-        qvals[is_dones_indices.tolist(), actions_tensor[is_dones].tolist()] = rewards[is_dones_indices.tolist()]
+        qvals[range(len(qvals)), actions] = (
+            rewards + self.gamma * torch.max(qvals_next, axis=1).values
+        )
+        qvals[is_dones_indices.tolist(), actions_tensor[is_dones].tolist()] = rewards[
+            is_dones_indices.tolist()
+        ]
 
         self.update_weights(states.tolist(), qvals.tolist())
 
-    def train(self, env: env_interface.EnvInterface, epoch=1000, reset_memory=False):
+    def train(
+        self,
+        env: env_interface.EnvInterface,
+        epoch=1000,
+        reset_memory=False,
+        is_clearing_output=True,
+    ):
         super().train(env, epoch, reset_memory)
 
         interval = 0
@@ -125,8 +144,14 @@ class QLearning(model_interface.ModelInterface):
             current_reward = np.sum(episode_rewards)
             self.train_rewards.append(current_reward)
             self.train_timesteps.append(timestep)
-            plot.plot_res(self.train_rewards, f'Q-Learning with Exp Replay and Target ({i + 1})')
-            print(f'EPOCH: {i}, total reward: {current_reward}, timestep: {timestep}, epsilon: {self.epsilon}')
+            plot.plot_res(
+                self.train_rewards,
+                f"Q-Learning with Exp Replay and Target ({i + 1})",
+                is_clearing_output,
+            )
+            print(
+                f"EPOCH: {i}, total reward: {current_reward}, timestep: {timestep}, epsilon: {self.epsilon}"
+            )
             if self.epsilon > self.min_epsilon:
                 self.epsilon -= 1 / epoch
 

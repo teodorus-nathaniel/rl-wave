@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Tuple
 
+
 class EnvInterface:
     def reset(self) -> Tuple[np.ndarray, bool]:
         pass

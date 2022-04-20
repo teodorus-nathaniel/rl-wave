@@ -2,9 +2,10 @@ from typing import Tuple
 from matplotlib import pyplot as plt
 import torch
 
+
 class ModelInterface:
     model = None
-    save_path = ''
+    save_path = ""
     train_losses = []
     train_rewards = []
     train_timesteps = []
@@ -27,15 +28,15 @@ class ModelInterface:
 
     def plot_train_memory(self):
         _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2)
-        ax1.set_title('Loss')
+        ax1.set_title("Loss")
         ax1.plot(self.avg_per_x_element(self.train_losses))
-        ax2.set_title('Timesteps')
+        ax2.set_title("Timesteps")
         ax2.plot(self.avg_per_x_element(self.train_timesteps))
-        ax3.set_title('Rewards')
+        ax3.set_title("Rewards")
         ax3.plot(self.avg_per_x_element(self.train_rewards))
         plt.show()
 
-    def train(self, env, epoch, reset_memory=False):
+    def train(self, env, epoch, reset_memory=False, is_clearing_output=True):
         if reset_memory:
             self.reset_train_memory()
 
@@ -54,15 +55,15 @@ class ModelInterface:
     def set_model_save_path(self, path):
         self.save_path = path
 
-    def load_model(self, path=''):
-        path = path if path != '' else self.save_path
+    def load_model(self, path=""):
+        path = path if path != "" else self.save_path
         try:
             self.model.load_state_dict(torch.load(path))
-            print('Model loaded')
+            print("Model loaded")
         except:
-            print('No model available')
+            print("No model available")
 
-    def save_model(self, path=''):
-        path = path if path != '' else self.save_path
+    def save_model(self, path=""):
+        path = path if path != "" else self.save_path
         torch.save(self.model.state_dict(), path)
-        print('Model Saved')
+        print("Model Saved")
