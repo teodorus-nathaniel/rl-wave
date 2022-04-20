@@ -3,11 +3,10 @@ from IPython.display import clear_output
 import numpy as np
 
 
-def plot_res(values, title="", is_clearing_output=True):
+def plot_res(values, title=""):
     """Plot the reward curve and histogram of results over time."""
     # Update the window after each episode
-    if is_clearing_output:
-        clear_output(wait=True)
+    clear_output(wait=True)
 
     # Define the figure
     f, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))

@@ -89,7 +89,7 @@ class QLearning(model_interface.ModelInterface):
         env: env_interface.EnvInterface,
         epoch=1000,
         reset_memory=False,
-        is_clearing_output=True,
+        show_plot=True,
     ):
         super().train(env, epoch, reset_memory)
 
@@ -122,11 +122,10 @@ class QLearning(model_interface.ModelInterface):
 
             self.train_rewards.append(episode_reward)
             self.train_timesteps.append(timestep)
-            plot.plot_res(
-                self.train_rewards,
-                f"Q-Learning with Exp Replay ({i + 1})",
-                is_clearing_output,
-            )
+            if show_plot:
+                plot.plot_res(
+                    self.train_rewards, f"Q-Learning with Exp Replay ({i + 1})"
+                )
             print(
                 f"EPOCH: {i}, total reward: {episode_reward}, timestep: {timestep}, epsilon: {self.epsilon}"
             )

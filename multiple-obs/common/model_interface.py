@@ -36,7 +36,7 @@ class ModelInterface:
         ax3.plot(self.avg_per_x_element(self.train_rewards))
         plt.show()
 
-    def train(self, env, epoch, reset_memory=False, is_clearing_output=True):
+    def train(self, env, epoch, reset_memory=False, show_plot=True):
         if reset_memory:
             self.reset_train_memory()
 
