@@ -29,9 +29,9 @@ class ModelInterface:
         _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2)
         ax1.set_title('Loss')
         ax1.plot(self.avg_per_x_element(self.train_losses))
-        ax1.set_title('Timesteps')
+        ax2.set_title('Timesteps')
         ax2.plot(self.avg_per_x_element(self.train_timesteps))
-        ax1.set_title('Rewards')
+        ax3.set_title('Rewards')
         ax3.plot(self.avg_per_x_element(self.train_rewards))
         plt.show()
 
