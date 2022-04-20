@@ -63,7 +63,7 @@ class A2C(model_interface.ModelInterface):
         discounted_rewards = torch.Tensor(self.discount_rewards(rewards))
 
         values = self.critic(states_tensor)
-        critic_loss = 0.5 * torch.pow(values - discounted_rewards, 2).mean()
+        critic_loss = self.loss_fn(values, discounted_rewards.reshape(-1, 1))
         self.update_critic(critic_loss)
 
         detached_values = values.detach().numpy()
