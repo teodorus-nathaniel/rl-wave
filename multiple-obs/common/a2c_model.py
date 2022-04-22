@@ -43,17 +43,13 @@ class A2C(model_interface.ModelInterface):
             if i > 0:
                 reversed_rewards[i] += reversed_rewards[i - 1] * self.gamma
         discounted_rewards = np.array(discounted_rewards[::-1])
+        discounted_rewards = (discounted_rewards - discounted_rewards.mean()) / (
+            discounted_rewards.std() + 1e-9
+        )
         return discounted_rewards
 
     def get_advantages(self, values, masks, rewards):
-        adv = np.zeros(len(values))
-        for i in reversed(range(len(rewards))):
-            next_value = 0
-            if i + 1 < len(rewards):
-                next_value = values[i + 1]
-            delta = rewards[i] + self.gamma * next_value * masks[i] - values[i]
-            adv[i] = delta
-
+        adv = rewards - values
         adv = np.array(adv)
         return (adv - np.mean(adv)) / (np.std(adv) + 1e-10)
 
@@ -70,7 +66,7 @@ class A2C(model_interface.ModelInterface):
         masks = np.ones_like(detached_values)
         masks[-1] = 0
         advantages = torch.Tensor(
-            self.get_advantages(detached_values.flatten(), masks, rewards)
+            self.get_advantages(detached_values.flatten(), masks, discounted_rewards)
         )
         actions = torch.Tensor(actions.reshape(-1, 1)).long()
         prob_batch = predictions.gather(dim=1, index=actions).squeeze()
