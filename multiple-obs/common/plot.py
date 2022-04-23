@@ -31,8 +31,16 @@ def plot_res(values, title=""):
     ax[0, 1].legend()
 
     # Plot last 100
-    ax[1, 0].plot(values[-100:])
+    last_100 = values[-100:]
+    ax[1, 0].plot(last_100)
     ax[1, 0].set_xlabel("Episodes")
     ax[1, 0].set_ylabel("Reward")
     ax[1, 0].legend()
+    # Calculate the trend
+    try:
+        z = np.polyfit(x, last_100, 1)
+        p = np.poly1d(z)
+        ax[1, 0].plot(x, p(x), "--", label="trend")
+    except:
+        print("")
     plt.show()

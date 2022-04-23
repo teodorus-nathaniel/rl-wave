@@ -32,6 +32,28 @@ class A2C(model_interface.ModelInterface):
         self.max_step = max_step
         self.gamma = gamma
 
+    def get_save_path(self, path):
+        path = path if path != "" else self.save_path
+        tokens = path.split(".")
+        ext = tokens[-1]
+        path_tokens = tokens[:-1]
+        name = ".".join(path_tokens)
+        return f"{name}_actor.{ext}", f"{name}_critic.{ext}"
+
+    def save_model(self, path=""):
+        actor, critic = self.get_save_path(path)
+        torch.save(self.actor.state_dict(), actor)
+        torch.save(self.critic.state_dict(), critic)
+
+    def load_model(self, path=""):
+        actor, critic = self.get_save_path(path)
+        try:
+            self.actor.load_state_dict(torch.load(actor))
+            self.critic.load_state_dict(torch.load(critic))
+            print("Model loaded")
+        except:
+            print("No model available")
+
     def discount_rewards(self, rewards: np.ndarray):
         reversed_rewards = np.copy(rewards)[::-1]
         discounted_rewards = []
