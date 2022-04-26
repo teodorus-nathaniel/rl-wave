@@ -54,6 +54,10 @@ class A2C(model_interface.ModelInterface):
         except:
             print("No model available")
 
+    @staticmethod
+    def normalize(data):
+        return (data - data.mean()) / data.std()
+
     def discount_rewards(self, rewards: np.ndarray):
         reversed_rewards = np.copy(rewards)[::-1]
         discounted_rewards = []
@@ -65,15 +69,12 @@ class A2C(model_interface.ModelInterface):
             if i > 0:
                 reversed_rewards[i] += reversed_rewards[i - 1] * self.gamma
         discounted_rewards = np.array(discounted_rewards[::-1])
-        discounted_rewards = (discounted_rewards - discounted_rewards.mean()) / (
-            discounted_rewards.std() + 1e-9
-        )
-        return discounted_rewards
+        return self.normalize(discounted_rewards)
 
-    def get_advantages(self, values, masks, rewards):
+    def get_advantages(self, values, rewards):
         adv = rewards - values
         adv = np.array(adv)
-        return (adv - np.mean(adv)) / (np.std(adv) + 1e-10)
+        return self.normalize(adv)
 
     def update_model(self, states, actions, rewards):
         states_tensor = torch.Tensor(states)
@@ -85,10 +86,8 @@ class A2C(model_interface.ModelInterface):
         self.update_critic(critic_loss)
 
         detached_values = values.detach().numpy()
-        masks = np.ones_like(detached_values)
-        masks[-1] = 0
         advantages = torch.Tensor(
-            self.get_advantages(detached_values.flatten(), masks, discounted_rewards)
+            self.get_advantages(detached_values.flatten(), discounted_rewards)
         )
         actions = torch.Tensor(actions.reshape(-1, 1)).long()
         prob_batch = predictions.gather(dim=1, index=actions).squeeze()
