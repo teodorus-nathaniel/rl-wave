@@ -1,6 +1,7 @@
 from typing import Tuple
 from matplotlib import pyplot as plt
 import torch
+import plot
 
 
 class ModelInterface:
@@ -15,25 +16,14 @@ class ModelInterface:
         self.train_rewards = []
         self.train_timesteps = []
 
-    @staticmethod
-    def avg_per_x_element(data, x=10):
-        avg = []
-        sum_data = 0
-        for i, el in enumerate(data):
-            sum_data += el
-            if i % x == 0:
-                avg.append(sum_data / x)
-                sum_data = 0
-        return avg
-
-    def plot_train_memory(self):
+    def plot_train_memory(self, smooth=10):
         _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2)
         ax1.set_title("Loss")
-        ax1.plot(self.avg_per_x_element(self.train_losses))
+        ax1.plot(plot.avg_per_x_element(self.train_losses, smooth))
         ax2.set_title("Timesteps")
-        ax2.plot(self.avg_per_x_element(self.train_timesteps))
+        ax2.plot(plot.avg_per_x_element(self.train_timesteps, smooth))
         ax3.set_title("Rewards")
-        ax3.plot(self.avg_per_x_element(self.train_rewards))
+        ax3.plot(plot.avg_per_x_element(self.train_rewards, smooth))
         plt.show()
 
     def train(self, env, epoch, reset_memory=False, show_plot=True):

@@ -76,10 +76,15 @@ class A2C(model_interface.ModelInterface):
         adv = np.array(adv)
         return self.normalize(adv)
 
-    def update_model(self, states, actions, rewards):
+    def update_model(self, states, actions, rewards, is_done, newest_state):
         states_tensor = torch.Tensor(states)
         predictions = self.actor(states_tensor)
-        discounted_rewards = torch.Tensor(self.discount_rewards(rewards))
+        last_value_pred = self.critic(torch.Tensor(newest_state))
+        if not is_done:
+            rewards = np.append(rewards, last_value_pred.detach().numpy()[0, 0])
+            discounted_rewards = torch.Tensor(self.discount_rewards(rewards)[:-1])
+        else:
+            discounted_rewards = torch.Tensor(self.discount_rewards(rewards))
 
         values = self.critic(states_tensor)
         critic_loss = self.loss_fn(values, discounted_rewards.reshape(-1, 1))
@@ -148,7 +153,7 @@ class A2C(model_interface.ModelInterface):
                 np.array(actions),
                 np.array(rewards),
             )
-            self.update_model(states, actions, rewards)
+            self.update_model(states, actions, rewards, is_done, state)
             self.train_rewards.append(episode_reward)
             self.train_timesteps.append(timestep)
             if show_plot:
