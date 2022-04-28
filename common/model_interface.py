@@ -19,7 +19,7 @@ class ModelInterface:
         self.train_timesteps = []
 
     def plot_train_memory(self, smooth=10):
-        _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2)
+        _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2, figsize=(12, 10))
         ax1.set_title("Loss")
         ax1.plot(plot.avg_per_x_element(self.train_losses, smooth))
         ax2.set_title("Timesteps")
@@ -61,9 +61,9 @@ class ModelInterface:
             print("No model available")
 
         try:
-            self.train_rewards = np.loadtxt(train_rewards_path, delimiter=',')
-            self.train_losses = np.loadtxt(train_losses_path, delimiter=',')
-            self.train_timesteps = np.loadtxt(train_timesteps_path, delimiter=',')
+            self.train_rewards = np.loadtxt(train_rewards_path, delimiter=',').tolist()
+            self.train_losses = np.loadtxt(train_losses_path, delimiter=',').tolist()
+            self.train_timesteps = np.loadtxt(train_timesteps_path, delimiter=',').tolist()
             print('Training history loaded')
         except Exception as e:
             print('Error load training history', e)
