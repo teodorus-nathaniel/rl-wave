@@ -17,8 +17,8 @@ def avg_per_x_element(data, x=10):
 
     return avg
 
-def plot_values_and_trend(ax, values):
-    ax.plot(values, label='score per run')
+def plot_values_and_trend(ax, values, label):
+    ax.plot(values, label=label)
     ax.set_xlabel('Episodes')
     ax.set_ylabel('Reward')
     x = range(len(values))
@@ -41,8 +41,8 @@ def plot_res(values, title='', smooth=50):
     f.suptitle(title)
 
     # plot smoothed values
-    plot_values_and_trend(ax[0, 0], smoothed_values)
-    plot_values_and_trend(ax[0, 1], smoothed_values_2)
+    plot_values_and_trend(ax[0, 0], smoothed_values, f'score per {smooth} run')
+    plot_values_and_trend(ax[0, 1], smoothed_values_2, f'score per {smooth * 2} run')
 
     # Plot the histogram of results
     ax[1, 0].hist(values[-smooth:])
@@ -52,6 +52,6 @@ def plot_res(values, title='', smooth=50):
 
     # Plot last {smooth} episodes
     last_values = values[-smooth:]
-    plot_values_and_trend(ax[1, 1], last_values)
+    plot_values_and_trend(ax[1, 1], last_values, f'score last {smooth} run')
 
     plt.show()
