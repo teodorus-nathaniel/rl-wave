@@ -54,7 +54,7 @@ class QLearning(model_interface.ModelInterface):
         batch_size=512,
         gamma=0.9,
         sync_interval=1000,
-        plot_smooth=50
+        plot_smooth=50,
     ):
         self.mem_size = mem_size
         self.epsilon = start_epsilon
@@ -150,7 +150,7 @@ class QLearning(model_interface.ModelInterface):
                 plot.plot_res(
                     self.train_rewards,
                     f"Q-Learning with Exp Replay and Target ({i + 1})",
-                    self.plot_smooth
+                    self.plot_smooth,
                 )
 
             print(
