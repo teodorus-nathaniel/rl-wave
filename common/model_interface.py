@@ -35,11 +35,13 @@ class ModelInterface:
     def test(self, env) -> Tuple[float, float]:
         return 0, 0
 
-    def test_avg(self, count=10, time_scale=10):
+    def test_avg(self, env_generator, count=10, time_scale=10):
         sum_rewards = 0
         sum_timesteps = 0
-        for _ in range(count):
-            reward, timesteps = self.test(time_scale)
+        for i in range(count):
+            env = env_generator(time_scale)
+            reward, timesteps = self.test(env)
+            print(f'TRY {i + 1}: {reward}, {timesteps}')
             sum_rewards += reward
             sum_timesteps += timesteps
         return (sum_rewards / count, sum_timesteps / count)
