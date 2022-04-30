@@ -1,8 +1,6 @@
-from mlagents.trainers.torch.distributions import MultiCategoricalDistribution
 import torch
 import torch.nn as nn
 import numpy as np
-from mlagents_envs.environment import ActionTuple, UnityEnvironment
 
 
 class WaveNetwork(nn.Module):

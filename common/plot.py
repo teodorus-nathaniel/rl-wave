@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 import numpy as np
 
+
 def avg_per_x_element(data, x=10):
     avg = []
     sum_data = 0
@@ -17,21 +18,23 @@ def avg_per_x_element(data, x=10):
 
     return avg
 
+
 def plot_values_and_trend(ax, values, label):
     ax.plot(values, label=label)
-    ax.set_xlabel('Episodes')
-    ax.set_ylabel('Reward')
+    ax.set_xlabel("Episodes")
+    ax.set_ylabel("Reward")
     x = range(len(values))
     ax.legend()
 
     try:
         z = np.polyfit(x, values, 1)
         p = np.poly1d(z)
-        ax.plot(x, p(x), '--', label='trend')
+        ax.plot(x, p(x), "--", label="trend")
     except:
         pass
 
-def plot_res(values, title='', smooth=50):
+
+def plot_res(values, title="", smooth=50):
     clear_output(wait=True)
 
     smoothed_values = avg_per_x_element(values, smooth)
@@ -41,17 +44,17 @@ def plot_res(values, title='', smooth=50):
     f.suptitle(title)
 
     # plot smoothed values
-    plot_values_and_trend(ax[0, 0], smoothed_values, f'score per {smooth} run')
-    plot_values_and_trend(ax[0, 1], smoothed_values_2, f'score per {smooth * 2} run')
+    plot_values_and_trend(ax[0, 0], smoothed_values, f"score per {smooth} run")
+    plot_values_and_trend(ax[0, 1], smoothed_values_2, f"score per {smooth * 2} run")
 
     # Plot the histogram of results
     ax[1, 0].hist(values[-smooth:])
-    ax[1, 0].set_xlabel(f'Scores per Last {smooth} Episodes')
-    ax[1, 0].set_ylabel('Frequency')
+    ax[1, 0].set_xlabel(f"Scores per Last {smooth} Episodes")
+    ax[1, 0].set_ylabel("Frequency")
     ax[1, 0].legend()
 
     # Plot last {smooth} episodes
     last_values = values[-smooth:]
-    plot_values_and_trend(ax[1, 1], last_values, f'score last {smooth} run')
+    plot_values_and_trend(ax[1, 1], last_values, f"score last {smooth} run")
 
     plt.show()
