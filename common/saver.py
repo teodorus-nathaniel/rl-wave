@@ -1,6 +1,8 @@
+from mlagents.trainers.torch.distributions import MultiCategoricalDistribution
 import torch
 import torch.nn as nn
 import numpy as np
+from mlagents_envs.environment import ActionTuple, UnityEnvironment
 
 
 class WaveNetwork(nn.Module):
@@ -13,20 +15,22 @@ class WaveNetwork(nn.Module):
             torch.nn.Softmax(dim=1),
         )
         self.memory_size_vector = torch.nn.Parameter(
-            torch.Tensor([int(0)]), requires_grad=False
+            torch.Tensor([0]), requires_grad=False
         )
         self.version_number = torch.nn.Parameter(torch.Tensor([3]), requires_grad=False)
         self.discrete_act_size_vector = torch.nn.Parameter(
-            torch.Tensor([1]), requires_grad=False
+            torch.Tensor([2]), requires_grad=False
         )
 
     def forward(self, obs1, obs2, action_masks=None):
-        inp = torch.cat((obs1, obs2), dim=1)
+        inp = torch.cat((obs2, obs1), dim=1)
         out = self.dense(inp)
+        out = torch.argmax(out)
+
         export_out = [
             self.version_number,
             self.memory_size_vector,
-            torch.argmax(out, 1),
+            out.reshape((-1, 1, 1)),
             self.discrete_act_size_vector,
         ]
         return tuple(export_out)
