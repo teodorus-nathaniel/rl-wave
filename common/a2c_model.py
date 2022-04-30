@@ -81,7 +81,6 @@ class A2C(model_interface.ModelInterface):
         predictions = self.actor(states_tensor)
         last_value_pred = self.critic(torch.Tensor(newest_state))
         if not is_done:
-            print("HOI HOI")
             rewards = np.append(rewards, last_value_pred.detach().numpy()[0, 0])
             discounted_rewards = self.discount_rewards(rewards)[:-1]
         else:
