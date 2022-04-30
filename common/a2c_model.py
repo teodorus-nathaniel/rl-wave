@@ -34,8 +34,8 @@ class A2C(model_interface.ModelInterface):
         self.gamma = gamma
 
     def get_model_paths(self):
-        actor_path = f'{self.save_path}/actor.pth'
-        critic_path = f'{self.save_path}/critic.pth'
+        actor_path = f"{self.save_path}/actor.pth"
+        critic_path = f"{self.save_path}/critic.pth"
         return actor_path, critic_path
 
     def save_model(self, path="", _=False):
@@ -81,7 +81,7 @@ class A2C(model_interface.ModelInterface):
         predictions = self.actor(states_tensor)
         last_value_pred = self.critic(torch.Tensor(newest_state))
         if not is_done:
-            print('HOI HOI')
+            print("HOI HOI")
             rewards = np.append(rewards, last_value_pred.detach().numpy()[0, 0])
             discounted_rewards = self.discount_rewards(rewards)[:-1]
         else:
@@ -180,3 +180,16 @@ class A2C(model_interface.ModelInterface):
 
         env.close()
         return total_reward, timestep
+
+
+class Actor(torch.nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    @staticmethod
+    def preprocess_input(a, b):
+        return torch.Tensor(np.append(a, b, axis=1))
+
+    def forward(self, obs1, obs2):
+        return self.model(self.preprocess_input(obs1, obs2))
