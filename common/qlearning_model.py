@@ -35,7 +35,7 @@ class QLearning(model_interface.ModelInterface):
         mem_size=2500,
         start_epsilon=1,
         min_epsilon=0.05,
-        max_step=500,
+        max_step=1000,
         batch_size=512,
         gamma=0.9,
     ):

@@ -1,9 +1,10 @@
-import env_interface
+import numpy as np
 from mlagents_envs.environment import ActionTuple, UnityEnvironment
 from mlagents_envs.side_channel.engine_configuration_channel import (
     EngineConfigurationChannel,
 )
-import numpy as np
+
+import env_interface
 
 
 class WaveEnv(env_interface.EnvInterface):

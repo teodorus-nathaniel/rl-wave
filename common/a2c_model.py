@@ -28,7 +28,7 @@ class A2C(model_interface.ModelInterface):
         self.set_train_params()
         self.reset_train_memory()
 
-    def set_train_params(self, max_step=500, gamma=0.9, plot_smooth=50):
+    def set_train_params(self, max_step=1000, gamma=0.9, plot_smooth=50):
         self.plot_smooth = plot_smooth
         self.max_step = max_step
         self.gamma = gamma

@@ -1,9 +1,11 @@
-from typing import Tuple
-from matplotlib import pyplot as plt
-import torch
-import plot
-import numpy as np
 import os
+from typing import Tuple
+
+import numpy as np
+import torch
+from matplotlib import pyplot as plt
+
+import plot
 
 
 class ModelInterface:

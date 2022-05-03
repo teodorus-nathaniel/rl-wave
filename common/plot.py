@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
-from IPython.display import clear_output
 import numpy as np
+from IPython.display import clear_output
 
 
 def avg_per_x_element(data, x=10):

@@ -1,9 +1,9 @@
+import copy
 import random
 from collections import deque
 
 import numpy as np
 import torch
-import copy
 
 import env_interface
 import model_interface
@@ -157,7 +157,7 @@ class QLearning(model_interface.ModelInterface):
                 f"EPOCH: {i}, total reward: {current_reward}, timestep: {timestep}, epsilon: {self.epsilon}"
             )
             if self.epsilon > self.min_epsilon:
-                self.epsilon -= 1 / epoch
+                self.epsilon -= 1 / (epoch / 2)
 
         env.close()
 
