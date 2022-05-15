@@ -61,7 +61,7 @@ class PPO(model_interface.ModelInterface):
 
     @staticmethod
     def normalize(data):
-        return (data - data.mean()) / data.std()
+        return (data - data.mean()) / (data.std() + 1e-8)
 
     def discount_rewards(self, rewards: np.ndarray):
         reversed_rewards = np.copy(rewards)[::-1]
@@ -158,10 +158,9 @@ class PPO(model_interface.ModelInterface):
 
             state_tensor = torch.Tensor(state)
 
-            dist, values = self.model(state_tensor)
+            dist, _ = self.model(state_tensor)
             action = dist.sample()
             action_item = action.squeeze().item()
-            print(values)
 
             log_probs.append(torch.squeeze(dist.log_prob(action)).item())
 
@@ -232,7 +231,7 @@ class PPO(model_interface.ModelInterface):
         while not is_done:
             timestep += 1
             predictions, _ = self.model(torch.Tensor(state))
-            predictions = predictions.detach().numpy()
+            predictions = predictions.probs.detach().numpy()
 
             action = np.argmax(predictions)
             state, reward, is_done = env.step(action)
