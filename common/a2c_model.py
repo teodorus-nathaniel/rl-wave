@@ -179,16 +179,3 @@ class A2C(model_interface.ModelInterface):
 
         env.close()
         return total_reward, timestep
-
-
-class Actor(torch.nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.model = model
-
-    @staticmethod
-    def preprocess_input(a, b):
-        return torch.Tensor(np.append(a, b, axis=1))
-
-    def forward(self, obs1, obs2):
-        return self.model(self.preprocess_input(obs1, obs2))
