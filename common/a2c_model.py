@@ -12,7 +12,7 @@ class A2C(model_interface.ModelInterface):
             torch.nn.Linear(input_layer, hidden_layer),
             torch.nn.ReLU(),
             torch.nn.Linear(hidden_layer, output_layer),
-            torch.nn.Softmax(dim=1),
+            torch.nn.Softmax(dim=-1),
         )
         self.critic = torch.nn.Sequential(
             torch.nn.Linear(input_layer, hidden_layer),
