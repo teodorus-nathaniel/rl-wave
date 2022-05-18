@@ -37,7 +37,7 @@ class WaveEnv(env_interface.EnvInterface):
 
     def reset(self):
         self.env.reset()
-        state, _, is_done = self.get_current_state()
+        state, _, is_done = self.step(1)
         return state, is_done
 
     def step(self, action):
