@@ -12,30 +12,34 @@ import plot
 class ActorCritic(nn.Module):
     def __init__(self, input_layer, output_layer, hidden_layer=256):
         super(ActorCritic, self).__init__()
-        self.actor = torch.nn.Sequential(
-            torch.nn.Linear(input_layer, hidden_layer),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hidden_layer, output_layer),
-            torch.nn.Softmax(dim=-1),
+        self.shared = nn.Sequential(
+            nn.Linear(input_layer, hidden_layer),
+            nn.ReLU(),
+            nn.Linear(hidden_layer, hidden_layer),
+            nn.ReLU(),
         )
-        self.critic = torch.nn.Sequential(
-            torch.nn.Linear(input_layer, hidden_layer),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hidden_layer, 1),
+        self.actor_layers = nn.Sequential(
+            nn.Linear(hidden_layer, output_layer),
+            nn.Softmax(dim=-1),
+        )
+        self.critic_layers = nn.Sequential(
+            nn.Linear(hidden_layer, 1)
         )
 
     def forward(self, inp):
-        actor_out = self.actor(inp)
+        out = self.shared(inp)
+
+        actor_out = self.actor_layers(out)
         actor_out = Categorical(actor_out)
 
-        critic_out = self.critic(inp)
+        critic_out = self.critic_layers(out)
 
         return actor_out, critic_out
 
 
 class PPO(model_interface.ModelInterface):
     def __init__(self, input_layer, output_layer, hidden_layer=256, \
-        lr=1e-4, ppo_epochs=5, clip=0.2, minibatch_size=128):
+        lr=1e-4, ppo_epochs=5, clip=0.2, minibatch_size=80):
         self.model = ActorCritic(input_layer, output_layer, hidden_layer)
 
         self.loss_fn = torch.nn.MSELoss()
