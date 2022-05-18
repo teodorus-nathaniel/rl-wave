@@ -3,21 +3,10 @@ import numpy as np
 from IPython.display import clear_output
 
 
-def avg_per_x_element(data, x=10):
-    avg = []
-    sum_data = 0
-    i = 0
-    for i, el in enumerate(data):
-        sum_data += el
-        if i > 0 and i % x == 0:
-            avg.append(sum_data / x)
-            sum_data = 0
-
-    if i % x != 0:
-        avg.append(sum_data / (i % x))
-
-    return avg
-
+def smooth_values(y, box_pts):
+    box = np.ones(box_pts) / box_pts
+    y_smooth = np.convolve(y, box, mode='valid')
+    return y_smooth
 
 def plot_values_and_trend(ax, values, label):
     ax.plot(values, label=label)
@@ -37,8 +26,8 @@ def plot_values_and_trend(ax, values, label):
 def plot_res(values, title="", smooth=50):
     clear_output(wait=True)
 
-    smoothed_values = avg_per_x_element(values, smooth)
-    smoothed_values_2 = avg_per_x_element(values, smooth * 2)
+    smoothed_values = smooth_values(values, smooth)
+    smoothed_values_2 = smooth_values(values, smooth * 2)
 
     f, ax = plt.subplots(nrows=2, ncols=2, figsize=(12, 10))
     f.suptitle(title)

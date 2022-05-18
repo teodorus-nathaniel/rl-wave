@@ -23,11 +23,11 @@ class ModelInterface:
     def plot_train_memory(self, smooth=10):
         _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2, figsize=(12, 10))
         ax1.set_title("Loss")
-        ax1.plot(plot.avg_per_x_element(self.train_losses, smooth))
+        ax1.plot(plot.smooth_values(self.train_losses, smooth))
         ax2.set_title("Timesteps")
-        ax2.plot(plot.avg_per_x_element(self.train_timesteps, smooth))
+        ax2.plot(plot.smooth_values(self.train_timesteps, smooth))
         ax3.set_title("Rewards")
-        ax3.plot(plot.avg_per_x_element(self.train_rewards, smooth))
+        ax3.plot(plot.smooth_values(self.train_rewards, smooth))
         plt.show()
 
     def train(self, env, epoch, reset_memory=False, show_plot=True):
