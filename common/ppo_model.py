@@ -34,8 +34,16 @@ class ActorCritic(nn.Module):
 
 
 class PPO(model_interface.ModelInterface):
-    def __init__(self, input_layer, output_layer, hidden_layer=256, \
-        lr=1e-4, ppo_epochs=5, clip=0.2, minibatch_size=128):
+    def __init__(
+        self,
+        input_layer,
+        output_layer,
+        hidden_layer=256,
+        lr=1e-4,
+        ppo_epochs=5,
+        clip=0.2,
+        minibatch_size=128,
+    ):
         self.model = ActorCritic(input_layer, output_layer, hidden_layer)
 
         self.loss_fn = torch.nn.MSELoss()
@@ -80,7 +88,9 @@ class PPO(model_interface.ModelInterface):
     def get_advantages_from_state(self, states, rewards, is_done, newest_state):
         _, last_value_pred = self.model(torch.Tensor(newest_state))
         if not is_done:
-            appended_rewards = np.append(rewards, last_value_pred.detach().numpy()[0, 0])
+            appended_rewards = np.append(
+                rewards, last_value_pred.detach().numpy()[0, 0]
+            )
             discounted_rewards = self.discount_rewards(appended_rewards)[:-1]
         else:
             discounted_rewards = self.discount_rewards(rewards)
@@ -92,11 +102,12 @@ class PPO(model_interface.ModelInterface):
         advantages = self.get_advantages(detached_values.flatten(), discounted_rewards)
         return discounted_rewards, advantages
 
-
     @staticmethod
     def random_sample(inds, minibatch_size):
         inds = np.random.permutation(inds)
-        batches = inds[:len(inds) // minibatch_size * minibatch_size].reshape(-1, minibatch_size)
+        batches = inds[: len(inds) // minibatch_size * minibatch_size].reshape(
+            -1, minibatch_size
+        )
         for batch in batches:
             yield torch.from_numpy(batch).long()
         remainder = len(inds) % minibatch_size
@@ -111,16 +122,19 @@ class PPO(model_interface.ModelInterface):
         first_term = ratio * advantages
         second_term = torch.clamp(ratio, 1.0 - self.clip, 1.0 + self.clip) * advantages
 
+        entropy = dist.entropy()
+
         actor_loss = -torch.min(first_term, second_term).mean()
         critic_loss = self.loss_fn(values, returns.reshape(-1, 1))
+        entropy_loss = -entropy.mean()
 
-        total_loss = actor_loss + 0.5 * critic_loss
+        total_loss = actor_loss + 0.5 * critic_loss + 0.01 * entropy_loss
 
         self.optimizer.zero_grad()
         total_loss.backward()
         self.optimizer.step()
 
-        self.train_losses.append(actor_loss.item())
+        self.train_losses.append(critic_loss.item())
 
     def ppo_optimization(self, states, actions, old_log_probs, returns, advantages):
         for _ in range(self.ppo_epochs):
@@ -173,7 +187,7 @@ class PPO(model_interface.ModelInterface):
             np.array(states),
             np.array(actions),
             np.array(rewards),
-            np.array(log_probs)
+            np.array(log_probs),
         )
         returns, advantages = self.get_advantages_from_state(
             states,
@@ -189,7 +203,7 @@ class PPO(model_interface.ModelInterface):
             torch.Tensor(returns),
             torch.Tensor(advantages),
             episode_reward,
-            timestep
+            timestep,
         )
 
     def train(
@@ -202,13 +216,15 @@ class PPO(model_interface.ModelInterface):
         super().train(env, epoch, reset_memory)
 
         for i in range(epoch):
-            states, \
-            actions, \
-            log_probs, \
-            returns, \
-            advantages, \
-            episode_reward, \
-            timestep = self.generate_trajectories(env)
+            (
+                states,
+                actions,
+                log_probs,
+                returns,
+                advantages,
+                episode_reward,
+                timestep,
+            ) = self.generate_trajectories(env)
 
             self.ppo_optimization(states, actions, log_probs, returns, advantages)
             self.train_rewards.append(episode_reward)
@@ -226,7 +242,7 @@ class PPO(model_interface.ModelInterface):
         total_reward = 0
         while not is_done:
             timestep += 1
-            predictions, _ = self.model(torch.Tensor(state))
+            predictions, values = self.model(torch.Tensor(state))
             predictions = predictions.probs.detach().numpy()
 
             action = np.argmax(predictions)
