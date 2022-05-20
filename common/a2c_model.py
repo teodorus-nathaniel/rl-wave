@@ -101,7 +101,7 @@ class A2C(model_interface.ModelInterface):
         actor_loss = (advantages * -torch.log(prob_batch)).mean()
         self.update_actor(actor_loss)
 
-        self.train_losses.append(actor_loss.item())
+        self.train_losses.append(critic_loss.item())
 
     def update_critic(self, loss):
         self.critic_optimizer.zero_grad()
