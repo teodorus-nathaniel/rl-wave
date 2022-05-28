@@ -33,14 +33,15 @@ class A2C(model_interface.ModelInterface):
         self.max_step = max_step
         self.gamma = gamma
 
-    def get_model_paths(self):
-        actor_path = f"{self.save_path}/actor.pth"
-        critic_path = f"{self.save_path}/critic.pth"
+    def get_model_paths(self, path=""):
+        current_path = path if path != "" else self.save_path
+        actor_path = f"{current_path}/actor.pth"
+        critic_path = f"{current_path}/critic.pth"
         return actor_path, critic_path
 
     def save_model(self, path="", _=False):
         super().save_model(path, True)
-        actor, critic = self.get_model_paths()
+        actor, critic = self.get_model_paths(path)
         torch.save(self.actor.state_dict(), actor)
         torch.save(self.critic.state_dict(), critic)
 
@@ -69,7 +70,7 @@ class A2C(model_interface.ModelInterface):
             if i > 0:
                 reversed_rewards[i] += reversed_rewards[i - 1] * self.gamma
         discounted_rewards = np.array(discounted_rewards[::-1])
-        return self.normalize(discounted_rewards)
+        return discounted_rewards
 
     def get_advantages(self, values, rewards):
         adv = rewards - values
@@ -79,8 +80,8 @@ class A2C(model_interface.ModelInterface):
     def update_model(self, states, actions, rewards, is_done, newest_state):
         states_tensor = torch.Tensor(states)
         predictions = self.actor(states_tensor)
-        last_value_pred = self.critic(torch.Tensor(newest_state))
         if not is_done:
+            last_value_pred = self.critic(torch.Tensor(newest_state))
             rewards = np.append(rewards, last_value_pred.detach().numpy()[0, 0])
             discounted_rewards = self.discount_rewards(rewards)[:-1]
         else:
@@ -119,6 +120,7 @@ class A2C(model_interface.ModelInterface):
         epoch=1000,
         reset_memory=False,
         show_plot=True,
+        save_interval=500,
     ):
         super().train(env, epoch, reset_memory)
 
@@ -160,6 +162,11 @@ class A2C(model_interface.ModelInterface):
             self.train_timesteps.append(timestep)
             if show_plot:
                 plot.plot_res(self.train_rewards, f"A2C ({i + 1})", self.plot_smooth)
+
+            if i % save_interval == 0 and i > 0:
+                path = f"{self.save_path}-{i}"
+                self.save_model(path)
+                print(f"saved to {path}")
 
             print(f"EPOCH: {i}, total reward: {episode_reward}, timestep: {timestep}")
 

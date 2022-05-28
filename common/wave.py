@@ -10,15 +10,17 @@ import env_interface
 class WaveEnv(env_interface.EnvInterface):
     env: UnityEnvironment
 
-    def __init__(self, path, timescale=30):
+    def __init__(self, path, timescale=30, worker_id=0):
         channel = EngineConfigurationChannel()
-        self.env = UnityEnvironment(file_name=path, seed=1, side_channels=[channel])
+        self.env = UnityEnvironment(file_name=path, seed=1, side_channels=[channel], worker_id=worker_id)
         channel.set_configuration_parameters(time_scale=timescale)
         print("WAVE environment created.")
 
     @staticmethod
     def preprocess_input(steps):
-        return np.append(steps.obs[1], steps.obs[0], axis=1)
+        state = np.append(steps.obs[1], steps.obs[0], axis=1)
+        # state = np.append(state, steps.obs[2], axis=1)
+        return state
 
     def get_current_step(self):
         decision_steps, terminal_steps = self.env.get_steps(self.get_behavior_name())
@@ -33,6 +35,8 @@ class WaveEnv(env_interface.EnvInterface):
         current_step, is_done = self.get_current_step()
         state = self.preprocess_input(current_step)
         reward = current_step.reward[0]
+        # if reward > 0.5:
+        #     reward = 5.0
         return state, reward, is_done
 
     def reset(self):

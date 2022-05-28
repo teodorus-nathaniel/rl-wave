@@ -10,7 +10,7 @@ import plot
 
 
 class ActorCritic(nn.Module):
-    def __init__(self, input_layer, output_layer, hidden_layer=256):
+    def __init__(self, input_layer, output_layer, hidden_layer=256, decreasing_lr=False):
         super(ActorCritic, self).__init__()
         self.actor = torch.nn.Sequential(
             torch.nn.Linear(input_layer, hidden_layer),
@@ -55,6 +55,7 @@ class PPO(model_interface.ModelInterface):
         self.minibatch_size = minibatch_size
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=0.9)
         self.set_train_params()
         self.reset_train_memory()
 
@@ -65,7 +66,7 @@ class PPO(model_interface.ModelInterface):
 
     @staticmethod
     def normalize(data):
-        return (data - data.mean()) / (data.std() + 1e-8)
+        return (data - data.mean()) / (data.std())
 
     def discount_rewards(self, rewards: np.ndarray):
         reversed_rewards = np.copy(rewards)[::-1]
@@ -78,7 +79,7 @@ class PPO(model_interface.ModelInterface):
             if i > 0:
                 reversed_rewards[i] += reversed_rewards[i - 1] * self.gamma
         discounted_rewards = np.array(discounted_rewards[::-1])
-        return self.normalize(discounted_rewards)
+        return discounted_rewards
 
     def get_advantages(self, values, rewards):
         adv = rewards - values
@@ -86,8 +87,8 @@ class PPO(model_interface.ModelInterface):
         return self.normalize(adv)
 
     def get_advantages_from_state(self, states, rewards, is_done, newest_state):
-        _, last_value_pred = self.model(torch.Tensor(newest_state))
         if not is_done:
+            _, last_value_pred = self.model(torch.Tensor(newest_state))
             appended_rewards = np.append(
                 rewards, last_value_pred.detach().numpy()[0, 0]
             )
@@ -112,19 +113,19 @@ class PPO(model_interface.ModelInterface):
             yield torch.from_numpy(batch).long()
         remainder = len(inds) % minibatch_size
         if remainder:
-            yield torch.from_numpy(np.array([inds[-remainder:]])).long()
+            yield torch.from_numpy(np.array(inds[-remainder:]).reshape(-1,)).long()
 
     def update_model(self, states, actions, old_log_probs, returns, advantages):
         dist, values = self.model(states)
         log_probs = dist.log_prob(actions)
 
-        ratio = (log_probs - old_log_probs).exp()
+        ratio = torch.exp(log_probs - old_log_probs.detach()).exp()
         first_term = ratio * advantages
         second_term = torch.clamp(ratio, 1.0 - self.clip, 1.0 + self.clip) * advantages
 
         entropy = dist.entropy()
 
-        actor_loss = -torch.min(first_term, second_term).mean()
+        actor_loss = -torch.mean(torch.min(first_term, second_term))
         critic_loss = self.loss_fn(values, returns.reshape(-1, 1))
         entropy_loss = -entropy.mean()
 
@@ -212,6 +213,8 @@ class PPO(model_interface.ModelInterface):
         epoch=1000,
         reset_memory=False,
         show_plot=True,
+        save_interval=500,
+        lr_decay_interval=500
     ):
         super().train(env, epoch, reset_memory)
 
@@ -231,8 +234,15 @@ class PPO(model_interface.ModelInterface):
             self.train_timesteps.append(timestep)
             if show_plot:
                 plot.plot_res(self.train_rewards, f"PPO ({i + 1})", self.plot_smooth)
+            if i % save_interval == 0 and i > 0:
+                path = f"{self.save_path}-{i}"
+                self.save_model(path)
+                print(f"saved to {path}")
 
-            print(f"EPOCH: {i}, total reward: {episode_reward}, timestep: {timestep}")
+            if i % lr_decay_interval == 0 and i > 0:
+                self.scheduler.step()
+
+            print(f"EPOCH: {i}, total reward: {episode_reward}, timestep: {timestep}, lr: {self.optimizer.param_groups[0]['lr']}")
 
         env.close()
 
@@ -243,6 +253,7 @@ class PPO(model_interface.ModelInterface):
         while not is_done:
             timestep += 1
             predictions, values = self.model(torch.Tensor(state))
+            print(predictions.probs, values, state)
             predictions = predictions.probs.detach().numpy()
 
             action = np.argmax(predictions)

@@ -15,7 +15,7 @@ class CustomEnv(gym.Env):
     def __init__(self, path, timescale=40):
         super(CustomEnv, self).__init__()
         self.action_space = spaces.Discrete(2)
-        self.observation_space = spaces.Box(-10., 10., (64,), np.float32)
+        self.observation_space = spaces.Box(-10, 10, (127,), np.float32)
         channel = EngineConfigurationChannel()
         self.env = UnityEnvironment(file_name=path, seed=1, side_channels=[channel])
         channel.set_configuration_parameters(time_scale=timescale)
@@ -23,10 +23,7 @@ class CustomEnv(gym.Env):
 
     @staticmethod
     def preprocess_input(steps):
-        obs1 = steps.obs[1]
-        obs1 /= 4
-        print(obs1)
-        return np.append(obs1, steps.obs[0], axis=1).squeeze()
+        return np.append(steps.obs[1], steps.obs[0], axis=1).squeeze()
 
     def get_current_step(self):
         decision_steps, terminal_steps = self.env.get_steps(self.get_behavior_name())
@@ -63,4 +60,4 @@ class CustomEnv(gym.Env):
         self.env.close()
 
     def render(self, mode="human"):
-        raise Exception('not implemented')
+        raise Exception("not implemented")
