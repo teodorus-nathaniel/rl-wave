@@ -52,9 +52,11 @@ class QLearning(model_interface.ModelInterface):
         min_epsilon=0.05,
         max_step=500,
         batch_size=512,
-        gamma=0.9,
+        gamma=0.99,
         sync_interval=1000,
         plot_smooth=50,
+        epsilon_decay=0.999,
+        save_interval=500,
     ):
         self.mem_size = mem_size
         self.epsilon = start_epsilon
@@ -64,6 +66,8 @@ class QLearning(model_interface.ModelInterface):
         self.gamma = gamma
         self.sync_interval = sync_interval
         self.plot_smooth = plot_smooth
+        self.epsilon_decay = epsilon_decay
+        self.save_interval = save_interval
 
     def update_weights(self, state, y):
         y_pred = self.model(torch.Tensor(state))
@@ -84,7 +88,7 @@ class QLearning(model_interface.ModelInterface):
         is_dones = batch_t[4]
 
         states = torch.Tensor(states)
-        actions_tensor = torch.Tensor(actions)
+        actions_tensor = torch.Tensor(actions).long()
         rewards = torch.Tensor(rewards)
         next_states = torch.Tensor(next_states)
         is_dones_tensor = torch.Tensor(is_dones)
@@ -153,11 +157,16 @@ class QLearning(model_interface.ModelInterface):
                     self.plot_smooth,
                 )
 
+            if i % self.save_interval == 0 and i > 0:
+                path = f"{self.save_path}-{i}"
+                self.save_model(path)
+                print(f"saved to {path}")
+
             print(
                 f"EPOCH: {i}, total reward: {current_reward}, timestep: {timestep}, epsilon: {self.epsilon}"
             )
             if self.epsilon > self.min_epsilon:
-                self.epsilon -= 1 / (epoch / 2)
+                self.epsilon *= self.epsilon_decay
 
         env.close()
 
