@@ -96,7 +96,7 @@ class QLearning(model_interface.ModelInterface):
         is_dones_indices = torch.where(is_dones_tensor == True)[0]
 
         qvals = self.model(states)
-        qvals_next = self.target_model(next_states)
+        qvals_next = self.target_model(next_states).detach()
 
         qvals[range(len(qvals)), actions] = (
             rewards + self.gamma * torch.max(qvals_next, axis=1).values
