@@ -232,14 +232,16 @@ class PPO(model_interface.ModelInterface):
             self.ppo_optimization(states, actions, log_probs, returns, advantages)
             self.train_rewards.append(episode_reward)
             self.train_timesteps.append(timestep)
-            if show_plot:
+
+            if show_plot and (i + 1) % self.plot_smooth == 0:
                 plot.plot_res(self.train_rewards, f"PPO ({i + 1})", self.plot_smooth)
-            if i % save_interval == 0 and i > 0:
+
+            if (i + 1) % save_interval == 0:
                 path = f"{self.save_path}-{i}"
                 self.save_model(path)
                 print(f"saved to {path}")
 
-            if i % lr_decay_interval == 0 and i > 0:
+            if (i + 1) % lr_decay_interval == 0:
                 self.scheduler.step()
 
             print(f"EPOCH: {i}, total reward: {episode_reward}, timestep: {timestep}, lr: {self.optimizer.param_groups[0]['lr']}")

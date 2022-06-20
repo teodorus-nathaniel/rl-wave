@@ -24,7 +24,9 @@ class A2C(model_interface.ModelInterface):
         self.input_layer = input_layer
         self.output_layer = output_layer
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr * 2)
+        self.actor_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.actor_optimizer, gamma=0.9)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=lr)
+        self.critic_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.critic_optimizer, gamma=0.9)
         self.set_train_params()
         self.reset_train_memory()
 
@@ -121,6 +123,7 @@ class A2C(model_interface.ModelInterface):
         reset_memory=False,
         show_plot=True,
         save_interval=500,
+        lr_decay_interval=False
     ):
         super().train(env, epoch, reset_memory)
 
@@ -160,13 +163,17 @@ class A2C(model_interface.ModelInterface):
             self.update_model(states, actions, rewards, is_done, state)
             self.train_rewards.append(episode_reward)
             self.train_timesteps.append(timestep)
-            if show_plot:
+
+            if show_plot and (i + 1) % self.plot_smooth == 0:
                 plot.plot_res(self.train_rewards, f"A2C ({i + 1})", self.plot_smooth)
 
-            if i % save_interval == 0 and i > 0:
+            if (i + 1) % save_interval == 0:
                 path = f"{self.save_path}-{i}"
                 self.save_model(path)
                 print(f"saved to {path}")
+
+            if lr_decay_interval and (i + 1) % lr_decay_interval == 0:
+                self.critic_scheduler.step()
 
             print(f"EPOCH: {i}, total reward: {episode_reward}, timestep: {timestep}")
 

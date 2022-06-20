@@ -10,9 +10,9 @@ import env_interface
 class WaveEnv(env_interface.EnvInterface):
     env: UnityEnvironment
 
-    def __init__(self, path, timescale=30, worker_id=0):
+    def __init__(self, path, timescale=30, no_graphics=True, worker_id=0):
         channel = EngineConfigurationChannel()
-        self.env = UnityEnvironment(file_name=path, seed=1, side_channels=[channel], worker_id=worker_id)
+        self.env = UnityEnvironment(file_name=path, no_graphics=no_graphics, seed=1, side_channels=[channel], worker_id=worker_id)
         channel.set_configuration_parameters(time_scale=timescale)
         print("WAVE environment created.")
 
