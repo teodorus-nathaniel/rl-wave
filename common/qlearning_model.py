@@ -56,7 +56,7 @@ class QLearning(model_interface.ModelInterface):
         is_dones = batch_t[4]
 
         states = torch.Tensor(states)
-        actions_tensor = torch.Tensor(actions)
+        actions_tensor = torch.Tensor(actions).long()
         rewards = torch.Tensor(rewards)
         next_states = torch.Tensor(next_states)
         is_dones_tensor = torch.Tensor(is_dones)
@@ -64,7 +64,7 @@ class QLearning(model_interface.ModelInterface):
         is_dones_indices = torch.where(is_dones_tensor == True)[0]
 
         qvals = self.model(states)
-        qvals_next = self.model(next_states)
+        qvals_next = self.model(next_states).detach()
 
         qvals[range(len(qvals)), actions] = (
             rewards + self.gamma * torch.max(qvals_next, axis=1).values
