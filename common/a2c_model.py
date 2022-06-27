@@ -1,13 +1,16 @@
 import numpy as np
 import torch
+from torch import nn
+from torch.distributions.categorical import Categorical
 
 import env_interface
 import model_interface
 import plot
 
 
-class A2C(model_interface.ModelInterface):
-    def __init__(self, input_layer, output_layer, hidden_layer=256, lr=1e-4):
+class ActorCritic(nn.Module):
+    def __init__(self, input_layer, output_layer, hidden_layer=256):
+        super(ActorCritic, self).__init__()
         self.actor = torch.nn.Sequential(
             torch.nn.Linear(input_layer, hidden_layer),
             torch.nn.ReLU(),
@@ -20,13 +23,23 @@ class A2C(model_interface.ModelInterface):
             torch.nn.Linear(hidden_layer, 1),
         )
 
+    def forward(self, inp):
+        actor_out = self.actor(inp)
+        actor_out = Categorical(actor_out)
+
+        critic_out = self.critic(inp)
+
+        return actor_out, critic_out
+
+class A2C(model_interface.ModelInterface):
+    def __init__(self, input_layer, output_layer, hidden_layer=256, lr=1e-4):
+        self.model = ActorCritic(input_layer, output_layer, hidden_layer)
+
         self.loss_fn = torch.nn.MSELoss()
         self.input_layer = input_layer
         self.output_layer = output_layer
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr * 2)
-        self.actor_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.actor_optimizer, gamma=0.9)
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=lr)
-        self.critic_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.critic_optimizer, gamma=0.9)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=0.9)
         self.set_train_params()
         self.reset_train_memory()
 
@@ -34,28 +47,6 @@ class A2C(model_interface.ModelInterface):
         self.plot_smooth = plot_smooth
         self.max_step = max_step
         self.gamma = gamma
-
-    def get_model_paths(self, path=""):
-        current_path = path if path != "" else self.save_path
-        actor_path = f"{current_path}/actor.pth"
-        critic_path = f"{current_path}/critic.pth"
-        return actor_path, critic_path
-
-    def save_model(self, path="", _=False):
-        super().save_model(path, True)
-        actor, critic = self.get_model_paths(path)
-        torch.save(self.actor.state_dict(), actor)
-        torch.save(self.critic.state_dict(), critic)
-
-    def load_model(self, path="", _=False):
-        super().load_model(path, True)
-        actor, critic = self.get_model_paths()
-        try:
-            self.actor.load_state_dict(torch.load(actor))
-            self.critic.load_state_dict(torch.load(critic))
-            print("Model loaded")
-        except:
-            print("No model available")
 
     @staticmethod
     def normalize(data):
@@ -81,40 +72,34 @@ class A2C(model_interface.ModelInterface):
 
     def update_model(self, states, actions, rewards, is_done, newest_state):
         states_tensor = torch.Tensor(states)
-        predictions = self.actor(states_tensor)
+        dist, values = self.model(states_tensor)
         if not is_done:
-            last_value_pred = self.critic(torch.Tensor(newest_state))
+            _, last_value_pred = self.model(torch.Tensor(newest_state))
             rewards = np.append(rewards, last_value_pred.detach().numpy()[0, 0])
             discounted_rewards = self.discount_rewards(rewards)[:-1]
         else:
             discounted_rewards = self.discount_rewards(rewards)
 
+        entropy = dist.entropy()
+        log_probs = dist.log_prob(torch.Tensor(actions))
+
         discounted_rewards = torch.Tensor(discounted_rewards)
-
-        values = self.critic(states_tensor)
-        critic_loss = self.loss_fn(values, discounted_rewards.reshape(-1, 1))
-        self.update_critic(critic_loss)
-
         detached_values = values.detach().numpy()
         advantages = torch.Tensor(
             self.get_advantages(detached_values.flatten(), discounted_rewards)
         )
-        actions = torch.Tensor(actions.reshape(-1, 1)).long()
-        prob_batch = predictions.gather(dim=1, index=actions).squeeze()
-        actor_loss = (advantages * -torch.log(prob_batch)).mean()
-        self.update_actor(actor_loss)
 
-        self.train_losses.append(critic_loss.item())
+        entropy_loss = -entropy.mean()
+        actor_loss = (advantages * -log_probs).mean()
+        critic_loss = self.loss_fn(values, discounted_rewards.reshape(-1, 1))
 
-    def update_critic(self, loss):
-        self.critic_optimizer.zero_grad()
-        loss.backward()
-        self.critic_optimizer.step()
+        total_loss = actor_loss + 0.5 * critic_loss + 0.01 * entropy_loss
 
-    def update_actor(self, loss):
-        self.actor_optimizer.zero_grad()
-        loss.backward()
-        self.actor_optimizer.step()
+        self.optimizer.zero_grad()
+        total_loss.backward()
+        self.optimizer.step()
+
+        self.train_losses.append(total_loss.item())
 
     def train(
         self,
@@ -141,16 +126,15 @@ class A2C(model_interface.ModelInterface):
 
                 state_tensor = torch.Tensor(state)
 
-                predictions = self.actor(state_tensor)
-                detached_predictions = predictions.detach().numpy().flatten()
-                action_space = np.array(range(self.output_layer))
-                action = np.random.choice(action_space, p=detached_predictions)
+                dist, _ = self.model(state_tensor)
+                action = dist.sample()
+                action_item = action.squeeze().item()
 
-                next_state, reward, is_done = env.step(action)
+                next_state, reward, is_done = env.step(action_item)
                 episode_reward += reward
 
                 states.append(state[0])
-                actions.append(action)
+                actions.append(action_item)
                 rewards.append(reward)
 
                 state = next_state
@@ -168,12 +152,15 @@ class A2C(model_interface.ModelInterface):
                 plot.plot_res(self.train_rewards, f"A2C ({i + 1})", self.plot_smooth)
 
             if (i + 1) % save_interval == 0:
-                path = f"{self.save_path}-{i}"
+                path = self.save_path
+                if i + 1 < epoch:
+                    path = f"{self.save_path}-{i + 1}"
+
                 self.save_model(path)
                 print(f"saved to {path}")
 
             if lr_decay_interval and (i + 1) % lr_decay_interval == 0:
-                self.critic_scheduler.step()
+                self.scheduler.step()
 
             print(f"EPOCH: {i}, total reward: {episode_reward}, timestep: {timestep}")
 
@@ -185,7 +172,8 @@ class A2C(model_interface.ModelInterface):
         total_reward = 0
         while not is_done:
             timestep += 1
-            predictions = self.actor(torch.Tensor(state)).detach().numpy()
+            predictions, _ = self.model(torch.Tensor(state))
+            predictions = predictions.probs.detach().numpy()
 
             action = np.argmax(predictions)
             state, reward, is_done = env.step(action)

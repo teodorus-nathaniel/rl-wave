@@ -10,7 +10,7 @@ import env_interface
 class WaveEnv(env_interface.EnvInterface):
     env: UnityEnvironment
 
-    def __init__(self, path, timescale=30, no_graphics=True, worker_id=0):
+    def __init__(self, path, timescale=30, no_graphics=False, worker_id=0):
         channel = EngineConfigurationChannel()
         self.env = UnityEnvironment(file_name=path, no_graphics=no_graphics, seed=1, side_channels=[channel], worker_id=worker_id)
         channel.set_configuration_parameters(time_scale=timescale)
@@ -19,7 +19,6 @@ class WaveEnv(env_interface.EnvInterface):
     @staticmethod
     def preprocess_input(steps):
         state = np.append(steps.obs[1], steps.obs[0], axis=1)
-        # state = np.append(state, steps.obs[2], axis=1)
         return state
 
     def get_current_step(self):

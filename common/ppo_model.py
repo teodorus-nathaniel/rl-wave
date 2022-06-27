@@ -10,7 +10,7 @@ import plot
 
 
 class ActorCritic(nn.Module):
-    def __init__(self, input_layer, output_layer, hidden_layer=256, decreasing_lr=False):
+    def __init__(self, input_layer, output_layer, hidden_layer=256):
         super(ActorCritic, self).__init__()
         self.actor = torch.nn.Sequential(
             torch.nn.Linear(input_layer, hidden_layer),
@@ -237,7 +237,9 @@ class PPO(model_interface.ModelInterface):
                 plot.plot_res(self.train_rewards, f"PPO ({i + 1})", self.plot_smooth)
 
             if (i + 1) % save_interval == 0:
-                path = f"{self.save_path}-{i}"
+                path = self.save_path
+                if i + 1 < epoch:
+                    path = f"{self.save_path}-{i + 1}"
                 self.save_model(path)
                 print(f"saved to {path}")
 
