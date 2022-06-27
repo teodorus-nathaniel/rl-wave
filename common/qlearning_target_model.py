@@ -48,7 +48,7 @@ class QLearning(model_interface.ModelInterface):
 
     def set_train_params(
         self,
-        mem_size=10000,
+        mem_size=100000,
         start_epsilon=1,
         min_epsilon=0.05,
         max_step=500,
