@@ -2,6 +2,7 @@ import os
 from typing import Tuple
 
 import numpy as np
+import seaborn as sns
 import torch
 from matplotlib import pyplot as plt
 
@@ -21,13 +22,16 @@ class ModelInterface:
         self.train_timesteps = []
 
     def plot_train_memory(self, smooth=10):
-        _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2, figsize=(12, 10))
-        ax1.set_title("Loss")
-        ax1.plot(plot.smooth_values(self.train_losses, smooth))
-        ax2.set_title("Timesteps")
+        sns.set(rc={'figure.figsize':(20, 8)})
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        fig.suptitle('Training Data')
+
+        ax1.set_title("Total Rewards per Episode")
+        ax1.plot(plot.smooth_values(self.train_rewards, smooth))
+
+        ax2.set_title("Timesteps per Episode")
         ax2.plot(plot.smooth_values(self.train_timesteps, smooth))
-        ax3.set_title("Rewards")
-        ax3.plot(plot.smooth_values(self.train_rewards, smooth))
+
         plt.show()
 
     def train(self, env, epoch, reset_memory=False, show_plot=True):
