@@ -257,7 +257,6 @@ class PPO(model_interface.ModelInterface):
         while not is_done:
             timestep += 1
             predictions, values = self.model(torch.Tensor(state))
-            print(predictions.probs, values, state)
             predictions = predictions.probs.detach().numpy()
 
             action = np.argmax(predictions)
