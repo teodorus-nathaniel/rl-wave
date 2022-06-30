@@ -162,7 +162,9 @@ class QLearning(model_interface.ModelInterface):
                 )
 
             if (i + 1) % self.save_interval == 0:
-                path = f"{self.save_path}-{i}"
+                path = self.save_path
+                if i + 1 < epoch:
+                    path = f"{self.save_path}-{i + 1}"
                 self.save_model(path)
                 print(f"saved to {path}")
 
