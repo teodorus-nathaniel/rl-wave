@@ -1,5 +1,8 @@
+from calendar import firstweekday
+
 import numpy as np
 import torch
+from tabulate import tabulate
 from torch import nn
 from torch.distributions.categorical import Categorical
 from torch.nn import functional as F
@@ -119,7 +122,7 @@ class PPO(model_interface.ModelInterface):
         dist, values = self.model(states)
         log_probs = dist.log_prob(actions)
 
-        ratio = torch.exp(log_probs - old_log_probs.detach()).exp()
+        ratio = torch.exp(log_probs - old_log_probs.detach())
         first_term = ratio * advantages
         second_term = torch.clamp(ratio, 1.0 - self.clip, 1.0 + self.clip) * advantages
 
@@ -135,7 +138,7 @@ class PPO(model_interface.ModelInterface):
         total_loss.backward()
         self.optimizer.step()
 
-        self.train_losses.append(critic_loss.item())
+        self.train_losses.append(total_loss.item())
 
     def ppo_optimization(self, states, actions, old_log_probs, returns, advantages):
         for _ in range(self.ppo_epochs):
