@@ -243,7 +243,7 @@ class PPO(model_interface.ModelInterface):
                 self.save_model(path)
                 print(f"saved to {path}")
 
-            if (i + 1) % lr_decay_interval == 0:
+            if lr_decay_interval and (i + 1) % lr_decay_interval == 0:
                 self.scheduler.step()
 
             print(f"EPOCH: {i}, total reward: {episode_reward}, timestep: {timestep}, lr: {self.optimizer.param_groups[0]['lr']}")
