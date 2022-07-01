@@ -187,7 +187,6 @@ class QLearning(model_interface.ModelInterface):
         while not is_done:
             timestep += 1
             preds = self.model(torch.Tensor(state)).detach().numpy()
-            print(preds)
 
             action = np.argmax(preds)
             state, reward, is_done = env.step(action)

@@ -263,5 +263,4 @@ class PPO(model_interface.ModelInterface):
             state, reward, is_done = env.step(action)
             total_reward += reward
 
-        env.close()
         return total_reward, timestep

@@ -41,15 +41,15 @@ class ModelInterface:
     def test(self, env) -> Tuple[float, float]:
         return 0, 0
 
-    def test_avg(self, env_generator, count=10, time_scale=10):
-        sum_rewards = 0
-        sum_timesteps = 0
-        for i in range(count):
-            env = env_generator(time_scale)
+    def test_avg(self, env, count=10, time_scale=10):
+        all_rewards = []
+        all_timesteps = []
+        for _ in range(count):
             reward, timesteps = self.test(env)
-            sum_rewards += reward
-            sum_timesteps += timesteps
-        return (sum_rewards / count, sum_timesteps / count)
+            print(reward, timesteps)
+            all_rewards.append(reward)
+            all_timesteps.append(timesteps)
+        return all_rewards, all_timesteps, np.average(np.array(all_rewards)), np.average(np.array(all_timesteps))
 
     def set_model_save_path(self, path):
         self.save_path = path
