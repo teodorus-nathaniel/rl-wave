@@ -23,7 +23,7 @@ def plot_values_and_trend(ax, values, label):
         pass
 
 
-def plot_res(values, title="", smooth=50):
+def plot_res(values, title="", smooth=50, loss=[]):
     clear_output(wait=True)
 
     smoothed_values = smooth_values(values, smooth)
@@ -42,8 +42,9 @@ def plot_res(values, title="", smooth=50):
     ax[1, 0].set_ylabel("Frequency")
     ax[1, 0].legend()
 
-    # Plot last {smooth} episodes
-    last_values = values[-smooth:]
-    plot_values_and_trend(ax[1, 1], last_values, f"score last {smooth} run")
+    plot_values_and_trend(ax[1, 1], loss, 'LOSS')
+    # # Plot last {smooth} episodes
+    # last_values = values[-smooth:]
+    # plot_values_and_trend(ax[1, 1], last_values, f"score last {smooth} run")
 
     plt.show()

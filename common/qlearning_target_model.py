@@ -159,6 +159,7 @@ class QLearning(model_interface.ModelInterface):
                     self.train_rewards,
                     f"Q-Learning with Exp Replay and Target ({i + 1})",
                     self.plot_smooth,
+                    self.train_losses
                 )
 
             if (i + 1) % self.save_interval == 0:
@@ -186,6 +187,7 @@ class QLearning(model_interface.ModelInterface):
         while not is_done:
             timestep += 1
             preds = self.model(torch.Tensor(state)).detach().numpy()
+            print(preds)
 
             action = np.argmax(preds)
             state, reward, is_done = env.step(action)
