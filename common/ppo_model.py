@@ -151,13 +151,10 @@ class PPO(model_interface.ModelInterface):
         first_term = ratio * advantages
         second_term = torch.clamp(ratio, 1.0 - self.clip, 1.0 + self.clip) * advantages
 
-        # entropy = dist.entropy()
-
         actor_loss = -torch.mean(torch.min(first_term, second_term))
 
         returns = advantages + old_vals
         critic_loss = self.loss_fn(values, returns.reshape(-1, 1))
-        # entropy_loss = -entropy.mean()
 
         total_loss = actor_loss + 0.5 * critic_loss
 
