@@ -58,7 +58,8 @@ class QLearning(model_interface.ModelInterface):
         plot_smooth=50,
         epsilon_decay=0.999,
         save_interval=500,
-        lr_decay_interval=500
+        lr_decay_interval=500,
+        learn_interval=50
     ):
         self.mem_size = mem_size
         self.epsilon = start_epsilon
@@ -71,6 +72,7 @@ class QLearning(model_interface.ModelInterface):
         self.epsilon_decay = epsilon_decay
         self.save_interval = save_interval
         self.lr_decay_interval = lr_decay_interval
+        self.learn_interval = learn_interval
 
     def update_weights(self, state, y):
         y_pred = self.model(torch.Tensor(state))
@@ -145,7 +147,7 @@ class QLearning(model_interface.ModelInterface):
 
                 state = next_state
 
-                if len(self.experiences) >= self.batch_size:
+                if len(self.experiences) >= self.batch_size and interval % self.learn_interval == 0:
                     self.update_model()
 
                 if interval % self.sync_interval == 0:
@@ -158,8 +160,7 @@ class QLearning(model_interface.ModelInterface):
                 plot.plot_res(
                     self.train_rewards,
                     f"Q-Learning with Exp Replay and Target ({i + 1})",
-                    self.plot_smooth,
-                    self.train_losses
+                    self.plot_smooth
                 )
 
             if (i + 1) % self.save_interval == 0:
@@ -184,7 +185,7 @@ class QLearning(model_interface.ModelInterface):
         state, is_done = env.reset()
         timestep = 0
         total_reward = 0
-        while not is_done:
+        while not is_done and timestep < 1000:
             timestep += 1
             preds = self.model(torch.Tensor(state)).detach().numpy()
 
@@ -192,5 +193,4 @@ class QLearning(model_interface.ModelInterface):
             state, reward, is_done = env.step(action)
             total_reward += reward
 
-        env.close()
         return total_reward, timestep
