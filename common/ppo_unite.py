@@ -12,25 +12,24 @@ import plot
 class ActorCritic(nn.Module):
     def __init__(self, input_layer, output_layer, hidden_layer=256):
         super(ActorCritic, self).__init__()
-        self.actor = torch.nn.Sequential(
+        self.shared = torch.nn.Sequential(
             torch.nn.Linear(input_layer, hidden_layer),
             torch.nn.ReLU(),
+        )
+        self.critic = torch.nn.Sequential(
+            torch.nn.Linear(hidden_layer, 1),
+        )
+        self.actor = torch.nn.Sequential(
             torch.nn.Linear(hidden_layer, output_layer),
             torch.nn.Softmax(dim=-1),
         )
-        self.critic = torch.nn.Sequential(
-            torch.nn.Linear(input_layer, hidden_layer),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hidden_layer, hidden_layer),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hidden_layer, 1),
-        )
 
     def forward(self, inp):
-        actor_out = self.actor(inp)
+        shared_out = self.shared(inp)
+        actor_out = self.actor(shared_out)
         actor_out = Categorical(actor_out)
 
-        critic_out = self.critic(inp)
+        critic_out = self.critic(shared_out)
 
         return actor_out, critic_out
 
@@ -149,11 +148,14 @@ class PPO(model_interface.ModelInterface):
         first_term = ratio * advantages
         second_term = torch.clamp(ratio, 1.0 - self.clip, 1.0 + self.clip) * advantages
 
+        entropy = dist.entropy()
+
         actor_loss = -torch.mean(torch.min(first_term, second_term))
 
         critic_loss = self.loss_fn(values, returns.reshape(-1, 1))
+        entropy_loss = -entropy.mean()
 
-        total_loss = actor_loss + 0.5 * critic_loss
+        total_loss = actor_loss + 0.5 * critic_loss + 0.01 * entropy_loss
 
         self.optimizer.zero_grad()
         total_loss.backward()
