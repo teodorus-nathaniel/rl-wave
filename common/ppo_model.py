@@ -192,7 +192,7 @@ class PPO(model_interface.ModelInterface):
         episode_reward = 0
         eps_timestep = 0
 
-        while not is_done:
+        while not is_done and eps_timestep < self.max_step:
             self.timestep += 1
             eps_timestep += 1
 
@@ -254,7 +254,7 @@ class PPO(model_interface.ModelInterface):
             if lr_decay_interval and (i + 1) % lr_decay_interval == 0:
                 self.scheduler.step()
 
-            print(f"EPOCH: {i}, total reward: {episode_reward}, timestep: {timestep}, lr: {self.optimizer.param_groups[0]['lr']}")
+            print(f"epoch: {i}, total timestep: {self.timestep}, total reward: {episode_reward}, timestep: {timestep}, lr: {self.optimizer.param_groups[0]['lr']}")
 
         env.close()
 
