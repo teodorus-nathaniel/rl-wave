@@ -20,6 +20,8 @@ class ActorCritic(nn.Module):
         self.critic = torch.nn.Sequential(
             torch.nn.Linear(input_layer, hidden_layer),
             torch.nn.ReLU(),
+            torch.nn.Linear(hidden_layer, hidden_layer),
+            torch.nn.ReLU(),
             torch.nn.Linear(hidden_layer, 1),
         )
 
@@ -30,6 +32,35 @@ class ActorCritic(nn.Module):
         critic_out = self.critic(inp)
 
         return actor_out, critic_out
+
+class A2CMemory:
+    def __init__(self):
+        self.states = []
+        self.vals = []
+        self.actions = []
+        self.rewards = []
+        self.dones = []
+
+    def store_memory(self, state, action, vals, reward, done):
+        self.states.append(state)
+        self.actions.append(action)
+        self.vals.append(vals)
+        self.rewards.append(reward)
+        self.dones.append(done)
+
+    def get_batch(self):
+        return np.array(self.states),\
+                np.array(self.actions),\
+                np.array(self.vals),\
+                np.array(self.rewards),\
+                np.array(self.dones),\
+
+    def clear_memory(self):
+        self.states = []
+        self.actions = []
+        self.rewards = []
+        self.dones = []
+        self.vals = []
 
 class A2C(model_interface.ModelInterface):
     def __init__(self, input_layer, output_layer, hidden_layer=256, lr=1e-4):
@@ -43,7 +74,10 @@ class A2C(model_interface.ModelInterface):
         self.set_train_params()
         self.reset_train_memory()
 
-    def set_train_params(self, max_step=1000, gamma=0.9, plot_smooth=50):
+        self.buffer = A2CMemory()
+
+    def set_train_params(self, max_step=1000, gamma=0.9, plot_smooth=50, gae_lambda=0.95):
+        self.gae_lambda = gae_lambda
         self.plot_smooth = plot_smooth
         self.max_step = max_step
         self.gamma = gamma
@@ -52,54 +86,42 @@ class A2C(model_interface.ModelInterface):
     def normalize(data):
         return (data - data.mean()) / data.std()
 
-    def discount_rewards(self, rewards: np.ndarray):
-        reversed_rewards = np.copy(rewards)[::-1]
-        discounted_rewards = []
-        for i, reward in enumerate(reversed_rewards):
-            discounted_rewards.append(
-                reward + (0 if i == 0 else reversed_rewards[i - 1])
-            )
-            reversed_rewards[i] = reward * self.gamma
-            if i > 0:
-                reversed_rewards[i] += reversed_rewards[i - 1] * self.gamma
-        discounted_rewards = np.array(discounted_rewards[::-1])
-        return discounted_rewards
+    def get_advantages(self, rewards, values, is_dones):
+        returns = []
+        gae = 0
+        for i in reversed(range(len(rewards))):
+            delta = rewards[i] + self.gamma * values[i + 1] * (1 - int(is_dones[i])) - values[i]
+            gae = delta + self.gamma * self.gae_lambda * (1 - int(is_dones[i])) * gae
+            returns.insert(0, gae + values[i])
 
-    def get_advantages(self, values, rewards):
-        adv = rewards - values
-        adv = np.array(adv)
-        return self.normalize(adv)
+        adv = np.array(returns) - values[:-1]
+        return np.array(returns), self.normalize(adv)
 
-    def update_model(self, states, actions, rewards, is_done, newest_state):
-        states_tensor = torch.Tensor(states)
-        dist, values = self.model(states_tensor)
-        if not is_done:
-            _, last_value_pred = self.model(torch.Tensor(newest_state))
-            rewards = np.append(rewards, last_value_pred.detach().numpy()[0, 0])
-            discounted_rewards = self.discount_rewards(rewards)[:-1]
-        else:
-            discounted_rewards = self.discount_rewards(rewards)
+    def update_model(self, last_val):
+        states, actions, vals, rewards, is_dones = self.buffer.get_batch()
+        appended_vals = np.append(vals, last_val)
+        returns, advantages = self.get_advantages(rewards, appended_vals, is_dones)
 
-        entropy = dist.entropy()
-        log_probs = dist.log_prob(torch.Tensor(actions))
+        states = torch.Tensor(states)
+        actions = torch.Tensor(actions).long()
+        returns = torch.Tensor(returns)
+        is_dones = torch.Tensor(is_dones)
+        advantages = torch.Tensor(advantages)
 
-        discounted_rewards = torch.Tensor(discounted_rewards)
-        detached_values = values.detach().numpy()
-        advantages = torch.Tensor(
-            self.get_advantages(detached_values.flatten(), discounted_rewards)
-        )
+        dist, values = self.model(states)
+        log_probs = dist.log_prob(actions)
 
-        entropy_loss = -entropy.mean()
         actor_loss = (advantages * -log_probs).mean()
-        critic_loss = self.loss_fn(values, discounted_rewards.reshape(-1, 1))
+        critic_loss = self.loss_fn(values, returns.reshape(-1, 1))
 
-        total_loss = actor_loss + 0.5 * critic_loss + 0.01 * entropy_loss
+        total_loss = actor_loss + 0.5 * critic_loss
 
         self.optimizer.zero_grad()
         total_loss.backward()
         self.optimizer.step()
 
         self.train_losses.append(total_loss.item())
+        self.buffer.clear_memory()
 
     def train(
         self,
@@ -112,41 +134,38 @@ class A2C(model_interface.ModelInterface):
     ):
         super().train(env, epoch, reset_memory)
 
+        timestep = 0
         for i in range(epoch):
-            timestep = 0
+            eps_timestep = 0
             state, is_done = env.reset()
             episode_reward = 0
 
-            states = []
-            actions = []
-            rewards = []
-
-            while timestep < self.max_step and not is_done:
+            while eps_timestep < self.max_step and not is_done:
+                eps_timestep += 1
                 timestep += 1
 
                 state_tensor = torch.Tensor(state)
 
-                dist, _ = self.model(state_tensor)
+                dist, values = self.model(state_tensor)
                 action = dist.sample()
                 action_item = action.squeeze().item()
+                value = values.squeeze().item()
 
                 next_state, reward, is_done = env.step(action_item)
                 episode_reward += reward
 
-                states.append(state[0])
-                actions.append(action_item)
-                rewards.append(reward)
+                self.buffer.store_memory(state[0], action_item, value, reward, is_done)
+                if timestep % self.max_step == 0:
+                    val = 0
+                    if not is_done:
+                        _, val = self.model(torch.Tensor(next_state))
+                        val = val.squeeze().item()
+                    self.update_model(val)
 
                 state = next_state
 
-            states, actions, rewards = (
-                np.array(states),
-                np.array(actions),
-                np.array(rewards),
-            )
-            self.update_model(states, actions, rewards, is_done, state)
             self.train_rewards.append(episode_reward)
-            self.train_timesteps.append(timestep)
+            self.train_timesteps.append(eps_timestep)
 
             if show_plot and (i + 1) % self.plot_smooth == 0:
                 plot.plot_res(self.train_rewards, f"A2C ({i + 1})", self.plot_smooth)
@@ -162,7 +181,7 @@ class A2C(model_interface.ModelInterface):
             if lr_decay_interval and (i + 1) % lr_decay_interval == 0:
                 self.scheduler.step()
 
-            print(f"EPOCH: {i}, total reward: {episode_reward}, timestep: {timestep}")
+            print(f"EPOCH: {i}, total reward: {episode_reward}, timestep: {eps_timestep}")
 
         env.close()
 
