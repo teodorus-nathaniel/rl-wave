@@ -17,9 +17,13 @@ class ActorCritic(nn.Module):
             torch.nn.ReLU(),
         )
         self.critic = torch.nn.Sequential(
+            torch.nn.Linear(hidden_layer, hidden_layer),
+            torch.nn.ReLU(),
             torch.nn.Linear(hidden_layer, 1),
         )
         self.actor = torch.nn.Sequential(
+            torch.nn.Linear(hidden_layer, hidden_layer),
+            torch.nn.ReLU(),
             torch.nn.Linear(hidden_layer, output_layer),
             torch.nn.Softmax(dim=-1),
         )
