@@ -31,6 +31,7 @@ class QLearning(model_interface.ModelInterface):
 
     def reset_train_memory(self):
         super().reset_train_memory()
+        print(self.mem_size)
         self.experiences = deque(maxlen=self.mem_size)
 
     @staticmethod
@@ -48,7 +49,7 @@ class QLearning(model_interface.ModelInterface):
 
     def set_train_params(
         self,
-        mem_size=100000,
+        mem_size=1_000_000,
         start_epsilon=1,
         min_epsilon=0.05,
         max_step=500,

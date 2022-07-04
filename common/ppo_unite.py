@@ -120,19 +120,6 @@ class PPO(model_interface.ModelInterface):
     def normalize(data):
         return (data - data.mean()) / (data.std())
 
-    def discount_rewards(self, rewards: np.ndarray):
-        reversed_rewards = np.copy(rewards)[::-1]
-        discounted_rewards = []
-        for i, reward in enumerate(reversed_rewards):
-            discounted_rewards.append(
-                reward + (0 if i == 0 else reversed_rewards[i - 1])
-            )
-            reversed_rewards[i] = reward * self.gamma
-            if i > 0:
-                reversed_rewards[i] += reversed_rewards[i - 1] * self.gamma
-        discounted_rewards = np.array(discounted_rewards[::-1])
-        return discounted_rewards
-
     def get_advantages(self, rewards, values, is_dones):
         returns = []
         gae = 0
