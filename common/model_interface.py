@@ -74,7 +74,8 @@ class ModelInterface:
             if not custom_model:
                 self.model.load_state_dict(torch.load(model_path))
                 print("Model loaded")
-        except Exception as _:
+        except Exception as e:
+            print(e)
             print("No model available")
 
         try:

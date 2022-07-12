@@ -13,7 +13,7 @@ import plot
 class QLearning(model_interface.ModelInterface):
     target_model = None
 
-    def __init__(self, input_layer, output_layer, hidden_layer=256, lr=1e-4):
+    def __init__(self, input_layer, output_layer, hidden_layer=256, lr=1e-4, mem_size=1_000_000):
         self.model = torch.nn.Sequential(
             torch.nn.Linear(input_layer, hidden_layer),
             torch.nn.ReLU(),
@@ -22,6 +22,7 @@ class QLearning(model_interface.ModelInterface):
             torch.nn.Linear(hidden_layer, output_layer),
         )
         self.sync_target_model()
+        self.mem_size = mem_size
         self.input_layer = input_layer
         self.output_layer = output_layer
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
@@ -31,7 +32,6 @@ class QLearning(model_interface.ModelInterface):
 
     def reset_train_memory(self):
         super().reset_train_memory()
-        print(self.mem_size)
         self.experiences = deque(maxlen=self.mem_size)
 
     @staticmethod
@@ -49,7 +49,6 @@ class QLearning(model_interface.ModelInterface):
 
     def set_train_params(
         self,
-        mem_size=1_000_000,
         start_epsilon=1,
         min_epsilon=0.05,
         max_step=500,
@@ -62,7 +61,6 @@ class QLearning(model_interface.ModelInterface):
         lr_decay_interval=500,
         learn_interval=50
     ):
-        self.mem_size = mem_size
         self.epsilon = start_epsilon
         self.min_epsilon = min_epsilon
         self.max_step = max_step
@@ -186,7 +184,7 @@ class QLearning(model_interface.ModelInterface):
         state, is_done = env.reset()
         timestep = 0
         total_reward = 0
-        while not is_done and timestep < 1000:
+        while not is_done:
             timestep += 1
             preds = self.model(torch.Tensor(state)).detach().numpy()
 

@@ -110,11 +110,13 @@ class A2C(model_interface.ModelInterface):
 
         dist, values = self.model(states)
         log_probs = dist.log_prob(actions)
+        entropy = dist.entropy()
 
         actor_loss = (advantages * -log_probs).mean()
         critic_loss = self.loss_fn(values, returns.reshape(-1, 1))
+        entropy_loss = -entropy.mean()
 
-        total_loss = actor_loss + 0.5 * critic_loss
+        total_loss = actor_loss + 0.5 * critic_loss + 0.01 * entropy_loss
 
         self.optimizer.zero_grad()
         total_loss.backward()

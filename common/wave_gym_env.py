@@ -12,12 +12,12 @@ class CustomEnv(gym.Env):
 
     metadata = {"render.modes": ["human"]}
 
-    def __init__(self, path, timescale=40):
+    def __init__(self, path, timescale=40, worker_id=0):
         super(CustomEnv, self).__init__()
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Box(-10, 10, (127,), np.float32)
         channel = EngineConfigurationChannel()
-        self.env = UnityEnvironment(file_name=path, seed=1, side_channels=[channel])
+        self.env = UnityEnvironment(file_name=path, seed=1, side_channels=[channel], worker_id=worker_id)
         channel.set_configuration_parameters(time_scale=timescale)
         print("WAVE environment created.")
 

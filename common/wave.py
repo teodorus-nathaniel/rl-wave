@@ -34,8 +34,8 @@ class WaveEnv(env_interface.EnvInterface):
         current_step, is_done = self.get_current_step()
         state = self.preprocess_input(current_step)
         reward = current_step.reward[0]
-        # if reward > 0.5:
-        #     reward = 5.0
+        # if reward > 1:
+        #     reward = 20
         return state, reward, is_done
 
     def reset(self):

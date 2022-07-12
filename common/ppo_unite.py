@@ -258,7 +258,6 @@ class PPO(model_interface.ModelInterface):
             timestep += 1
             predictions, values = self.model(torch.Tensor(state))
             predictions = predictions.probs.detach().numpy()
-            print(predictions, values)
 
             action = np.argmax(predictions)
             state, reward, is_done = env.step(action)
