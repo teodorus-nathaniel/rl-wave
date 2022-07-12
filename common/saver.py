@@ -3,15 +3,10 @@ import torch
 import torch.nn as nn
 
 
-class WaveNetwork(nn.Module):
-    def __init__(self, hidden_layer=512):
-        super(WaveNetwork, self).__init__()
-        self.dense = nn.Sequential(
-            torch.nn.Linear(64, hidden_layer),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hidden_layer, 2),
-            torch.nn.Softmax(dim=1),
-        )
+class ModelWrapper(nn.Module):
+    def __init__(self, model):
+        super(ModelWrapper, self).__init__()
+        self.model = model
         self.memory_size_vector = torch.nn.Parameter(
             torch.Tensor([0]), requires_grad=False
         )
@@ -20,9 +15,12 @@ class WaveNetwork(nn.Module):
             torch.Tensor([2]), requires_grad=False
         )
 
-    def forward(self, obs1, obs2, action_masks=None):
+    def forward(self, obs1, obs2, _action_masks=None):
         inp = torch.cat((obs2, obs1), dim=1)
-        out = self.dense(inp)
+        out = self.model(inp)
+        if isinstance(out, list) or isinstance(out, tuple):
+            out = out[0].probs
+
         out = torch.argmax(out)
 
         export_out = [
@@ -34,14 +32,14 @@ class WaveNetwork(nn.Module):
         return tuple(export_out)
 
 
-def save_wave_model(hidden_layer, load_path, save_path):
-    actor = WaveNetwork(hidden_layer)
-    actor.dense.load_state_dict(torch.load(load_path))
+def save_wave_model(model, load_path, save_path):
+    actor = ModelWrapper(model)
+    actor.model.load_state_dict(torch.load(load_path))
     torch.onnx.export(
         actor,
         (
-            torch.Tensor(np.zeros((1, 62))),
-            torch.Tensor(np.zeros((1, 2))),
+            torch.Tensor(np.zeros((1, 124))),
+            torch.Tensor(np.zeros((1, 3))),
             torch.Tensor(np.zeros((1, 2))),
         ),
         save_path,

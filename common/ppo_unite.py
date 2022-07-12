@@ -9,9 +9,9 @@ import model_interface
 import plot
 
 
-class ActorCritic(nn.Module):
+class Model(nn.Module):
     def __init__(self, input_layer, output_layer, hidden_layer=256):
-        super(ActorCritic, self).__init__()
+        super(Model, self).__init__()
         self.shared = torch.nn.Sequential(
             torch.nn.Linear(input_layer, hidden_layer),
             torch.nn.ReLU(),
@@ -90,7 +90,7 @@ class PPO(model_interface.ModelInterface):
         clip=0.2,
         minibatch_size=128,
     ):
-        self.model = ActorCritic(input_layer, output_layer, hidden_layer)
+        self.model = Model(input_layer, output_layer, hidden_layer)
 
         self.loss_fn = torch.nn.MSELoss()
         self.input_layer = input_layer

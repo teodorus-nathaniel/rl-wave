@@ -10,17 +10,20 @@ import model_interface
 import plot
 
 
+def get_model(input_layer, output_layer, hidden_layer):
+    return torch.nn.Sequential(
+        torch.nn.Linear(input_layer, hidden_layer),
+        torch.nn.ReLU(),
+        torch.nn.Linear(hidden_layer, hidden_layer),
+        torch.nn.ReLU(),
+        torch.nn.Linear(hidden_layer, output_layer),
+    )
+
 class QLearning(model_interface.ModelInterface):
     target_model = None
 
     def __init__(self, input_layer, output_layer, hidden_layer=256, lr=1e-4, mem_size=1_000_000):
-        self.model = torch.nn.Sequential(
-            torch.nn.Linear(input_layer, hidden_layer),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hidden_layer, hidden_layer),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hidden_layer, output_layer),
-        )
+        self.model = get_model(input_layer, output_layer, hidden_layer)
         self.sync_target_model()
         self.mem_size = mem_size
         self.input_layer = input_layer
